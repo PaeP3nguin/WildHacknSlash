@@ -40,8 +40,8 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
     private static final int Z = 2;
 
     /* Game parameters */
-    private static final int BLOCK_SENSITIVITY = 6;
-    private static final int ATTACK_SENSITIVITY = 8;
+    private static final int BLOCK_SENSITIVITY = 10;
+    private static final int ATTACK_SENSITIVITY = 10;
     private static final int ACTION_DELAY = 400;
     private static final int REACTION_TIME = 400;
     private static final int MAX_HEALTH = 10;
@@ -85,6 +85,8 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
     private Sensor mAccelerometer;
 
     private LinkedList<Float[]> lastAccels;
+    boolean[] lastBig = new boolean[]{false, false, false};
+    boolean[] lastSmall = new boolean[]{false, false, false};
     private long lastActionTime = 0;
     private Random random;
     private BluetoothDevice bluetoothDevice;
@@ -314,8 +316,8 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
 //            Log.i("S", String.format("x: %3.3f, y: %3.3f, z: %3.3f", event.values[X], event.values[Y], event.values[Z]));
 
             int attack = 0;
-            boolean[] big = new boolean[]{false, false, false};
-            boolean[] small = new boolean[]{false, false, false};
+            boolean[] big = new boolean[] {false, false, false};
+            boolean[] small = new boolean[] {false, false, false};
             boolean cancel = false;
 
             for (int i = 0; i <= Z; i++) {
@@ -327,9 +329,21 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
                 }
             }
 
-            if (big[X] && big[Y]) {
-                attack = HACK_VERTICAL;
-            } else if (big[Y]) {
+            int avgZ = 0;
+            for (Float[] val : lastAccels) {
+                avgZ += val[Z];
+            }
+            avgZ /= lastAccels.size() + 1;
+
+            if ((big[X] || lastBig[X]) && (small[Y] || lastSmall[Y])) {
+                if (avgZ <= 9.8 / 2 && avgZ >= -9.8 / 2) {
+                    attack = HACK_VERTICAL;
+                } else if (avgZ <= -9.8 / 2) {
+                    attack = HACK_LEFT;
+                } else if (avgZ >= 9.8 / 2) {
+                    attack = HACK_RIGHT;
+                }
+            } else if (big[Y] || lastBig[Y]) {
                 for (Float[] val : lastAccels) {
                     if (val[Y] < -10) {
                         Log.i("S", String.format("Bad stab stopped y: %3.3f", val[Y]));
@@ -341,18 +355,6 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
 
                 if (!cancel) {
                     attack = STAB;
-                }
-            } else if (small[Y] && big[X]) {
-                int avgZ = 0;
-                for (Float[] val : lastAccels) {
-                    avgZ += val[Z];
-                }
-                avgZ /= lastAccels.size();
-                // Right swipe
-                if (avgZ <= -9.8 / 2) {
-                    attack = HACK_LEFT;
-                } else if (avgZ >= 9.8 / 2) {
-                    attack = HACK_RIGHT;
                 }
             }
 
@@ -434,6 +436,9 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
             } else {
 //                Log.i("Attack", "Too soon!");
             }
+
+            lastBig = big;
+            lastSmall = small;
 
             lastAccels.add(new Float[]{event.values[X], event.values[Y], event.values[Z]});
 
