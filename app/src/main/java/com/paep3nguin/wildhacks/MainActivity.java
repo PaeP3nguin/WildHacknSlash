@@ -35,8 +35,14 @@ import butterknife.OnClick;
 
 public class MainActivity extends AppCompatActivity implements SimpleBluetoothListener, SensorEventListener {
 
+    private static final int X = 0;
+    private static final int Y = 1;
+    private static final int Z = 2;
+
     /* Game parameters */
-    private static final int SENSITIVITY = 5;
+    private static final int BLOCK_SENSITIVITY = 6;
+    private static final int ATTACK_SENSITIVITY = 8;
+    private static final int ACTION_DELAY = 400;
     private static final int REACTION_TIME = 400;
     private static final int MAX_HEALTH = 10;
 
@@ -56,9 +62,10 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
     private static final int BLOCK1 = 2;
     private static final int BLOCK2 = 3;
     private static final int BLOCK3 = 4;
-    private static final int HIT_SOUND = 5;
-    private static final int LOSS_SOUND = 6;
-    private static final int WIN_SOUND = 7;
+    private static final int BLOCK4 = 5;
+    private static final int HIT_SOUND = 6;
+    private static final int LOSS_SOUND = 7;
+    private static final int WIN_SOUND = 8;
 
     private Dialog dialog;
     View whiteBar;
@@ -76,6 +83,7 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
     private Sensor mAccelerometer;
 
     private LinkedList<Float[]> lastAccels;
+    private long lastActionTime = 0;
     private Random random;
     private BluetoothDevice bluetoothDevice;
 
@@ -91,8 +99,9 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
 
         ButterKnife.bind(this);
 
-        dialog = new Dialog(this,android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        dialog = new Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
         dialog.setContentView(R.layout.dialog);
+        dialog.setCancelable(false);
         whiteBar = ButterKnife.findById(dialog, R.id.red_bar);
         redBar = ButterKnife.findById(dialog, R.id.white_bar);
 
@@ -107,6 +116,7 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
         soundIDs.add(soundPool.load(this, R.raw.swords_hit_1, 1));
         soundIDs.add(soundPool.load(this, R.raw.swords_hit_2, 1));
         soundIDs.add(soundPool.load(this, R.raw.swords_hit_3, 1));
+        soundIDs.add(soundPool.load(this, R.raw.swords_hit_4, 1));
         soundIDs.add(soundPool.load(this, R.raw.wilhelm, 1));
         soundIDs.add(soundPool.load(this, R.raw.fatality, 1));
         soundIDs.add(soundPool.load(this, R.raw.triumph, 1));
@@ -213,24 +223,25 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
         if (bytes.length > 1) {
             Toast.makeText(this, s, Toast.LENGTH_SHORT).show();
         } else {
-            switch (bytes[0]) {
+            final int a = bytes[0];
+
+            switch (a) {
+                case 0:
+                    break;
                 case YOU_WIN:
                     endDuel(true);
                     break;
                 case PLAY_AGAIN:
                     startGame();
                     break;
-                case STAB:
-                    action.set(STAB);
-
-                    Log.i("Action", "Stab incoming!");
-
+                default:
+                    action.set(a);
                     handler.postDelayed(new Runnable() {
                         @Override
                         public void run() {
-                            if (action.compareAndSet(STAB, 0)) {
+                            if (action.compareAndSet(a, 0)) {
                                 takeDamage();
-                                Log.i("Action", "Got stabbed ;(");
+                                Log.i("Action", "Got hit by " + Integer.toString(a) + " ;(");
                             }
                         }
                     }, REACTION_TIME);
@@ -249,7 +260,7 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
     @Override
     public void onDeviceDisconnected(BluetoothDevice bluetoothDevice) {
         Toast.makeText(this, "Disconnected", Toast.LENGTH_SHORT).show();
-        bluetoothDevice = null;
+        this.bluetoothDevice = null;
         endGame();
     }
 
@@ -280,15 +291,28 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor == mAccelerometer) {
 
-            Log.i("S", String.format("x: %3.3f, y: %3.3f, z: %3.3f", event.values[0], event.values[1], event.values[2]));
+//            Log.i("S", String.format("x: %3.3f, y: %3.3f, z: %3.3f", event.values[X], event.values[Y], event.values[Z]));
 
             int attack = 0;
+            boolean[] big = new boolean[]{false, false, false};
+            boolean[] small = new boolean[]{false, false, false};
             boolean cancel = false;
 
-            if (event.values[1] >= 9.8 + SENSITIVITY && lastAccels.size() > 0 && lastAccels.getLast()[1] < 9.8 + 8) {
+            for (int i = 0; i <= Z; i++) {
+                if (event.values[i] >= 9.8 + ATTACK_SENSITIVITY) {
+                    big[i] = true;
+                }
+                if (event.values[i] <= -9.8 - ATTACK_SENSITIVITY) {
+                    small[i] = true;
+                }
+            }
+
+            if (big[X] && big[Y]) {
+                attack = HACK_VERTICAL;
+            } else if (big[Y]) {
                 for (Float[] val : lastAccels) {
-                    if (val[1] < -10) {
-                        Log.i("S", String.format("Bad stab stopped y: %3.3f", val[1]));
+                    if (val[Y] < -10) {
+                        Log.i("S", String.format("Bad stab stopped y: %3.3f", val[Y]));
                         lastAccels.clear();
                         cancel = true;
                         break;
@@ -298,29 +322,76 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
                 if (!cancel) {
                     attack = STAB;
                 }
+            } else if (small[Y] && big[X]) {
+                int avgZ = 0;
+                for (Float[] val : lastAccels) {
+                    avgZ += val[Z];
+                }
+                avgZ /= lastAccels.size();
+                // Right swipe
+                if (avgZ <= -9.8 / 2) {
+                    attack = HACK_LEFT;
+                } else if (avgZ >= 9.8 / 2) {
+                    attack = HACK_RIGHT;
+                }
             }
 
-            switch (action.get()) {
-                case 0:
-                    switch (attack) {
-                        case STAB:
-                            simpleBluetooth.sendData(STAB);
-                            playSound(ATTACK1);
-                            Log.i("Attack", "Stab");
-                            lastAccels.clear();
+            if (System.currentTimeMillis() - ACTION_DELAY >= lastActionTime) {
+                switch (action.get()) {
+                    case 0:
+                        if (attack == 0) {
                             break;
-                    }
-                    break;
-                case STAB:
-                    if (Math.abs(event.values[2]) >= 9.8 + SENSITIVITY || attack == STAB) {
-                        action.set(0);
-                        playSound(random.nextInt((BLOCK3 - BLOCK1) + 1) + BLOCK1);
-                        Log.i("Action", "Stab blocked!");
-                    }
-                    break;
+                        }
+                        if (attack == STAB) {
+                            playSound(ATTACK1);
+                            simpleBluetooth.sendData(STAB);
+                            Log.i("Attack", "Sending STAB");
+                        } else {
+                            playSound(ATTACK2);
+                            simpleBluetooth.sendData(attack);
+                            Log.i("Attack", "Sending " + Integer.toString(attack));
+                        }
+                        lastAccels.clear();
+                        lastActionTime = System.currentTimeMillis();
+                        break;
+                    case STAB:
+                        if (Math.abs(event.values[Z]) >= 9.8 + BLOCK_SENSITIVITY || attack == STAB) {
+                            action.set(0);
+                            playSound(random.nextInt((BLOCK4 - BLOCK1) + 1) + BLOCK1);
+                            Log.i("Action", "STAB blocked!");
+                            lastActionTime = System.currentTimeMillis();
+                        }
+                        break;
+                    case HACK_RIGHT:
+                        if (event.values[Z] <= -9.8 - BLOCK_SENSITIVITY || attack == HACK_RIGHT) {
+                            action.set(0);
+                            playSound(random.nextInt((BLOCK4 - BLOCK1) + 1) + BLOCK1);
+                            Log.i("Action", "HACK_RIGHT blocked!");
+                            lastActionTime = System.currentTimeMillis();
+                        }
+                        break;
+                    case HACK_LEFT:
+                        if (event.values[Z] >= 9.8 + BLOCK_SENSITIVITY || attack == HACK_LEFT) {
+                            action.set(0);
+                            playSound(random.nextInt((BLOCK4 - BLOCK1) + 1) + BLOCK1);
+                            Log.i("Action", "HACK_LEFT blocked!");
+                            lastActionTime = System.currentTimeMillis();
+                        }
+                        break;
+                    case HACK_VERTICAL:
+                        if (event.values[Z] <= -9.8 - BLOCK_SENSITIVITY || attack == HACK_VERTICAL) {
+                            action.set(0);
+                            playSound(random.nextInt((BLOCK4 - BLOCK1) + 1) + BLOCK1);
+                            Log.i("Action", "HACK_VERTICAL blocked!");
+                            lastActionTime = System.currentTimeMillis();
+                        }
+                        break;
+                }
+            } else {
+//                Log.i("Attack", "Too soon!");
             }
 
-            lastAccels.add(new Float[]{event.values[0], event.values[1], event.values[2]});
+            lastAccels.add(new Float[]{event.values[X], event.values[Y], event.values[Z]});
 
             if (lastAccels.size() > 10) {
                 lastAccels.remove();
