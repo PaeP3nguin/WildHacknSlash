@@ -42,8 +42,9 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
     /* Game parameters */
     private static final int BLOCK_SENSITIVITY = 10;
     private static final int ATTACK_SENSITIVITY = 10;
-    private static final int ACTION_DELAY = 400;
-    private static final int REACTION_TIME = 400;
+    private static final int ACTION_DELAY = 500;
+    private static final int REACTION_TIME = 500;
+    private static final int BLOCK_ADVANTAGE = 150;
     private static final int MAX_HEALTH = 10;
 
     /* Bluetooth constants */
@@ -316,8 +317,8 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
 //            Log.i("S", String.format("x: %3.3f, y: %3.3f, z: %3.3f", event.values[X], event.values[Y], event.values[Z]));
 
             int attack = 0;
-            boolean[] big = new boolean[] {false, false, false};
-            boolean[] small = new boolean[] {false, false, false};
+            boolean[] big = new boolean[]{false, false, false};
+            boolean[] small = new boolean[]{false, false, false};
             boolean cancel = false;
 
             for (int i = 0; i <= Z; i++) {
@@ -393,7 +394,7 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
                                 playSound(random.nextInt((BLOCK4 - BLOCK1) + 1) + BLOCK1);
                             }
                             Log.i("Action", "STAB blocked!");
-                            lastActionTime = System.currentTimeMillis();
+                            lastActionTime = System.currentTimeMillis() - BLOCK_ADVANTAGE;
                         }
                         break;
                     case HACK_RIGHT:
@@ -405,7 +406,7 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
                                 playSound(random.nextInt((BLOCK4 - BLOCK1) + 1) + BLOCK1);
                             }
                             Log.i("Action", "HACK_RIGHT blocked!");
-                            lastActionTime = System.currentTimeMillis();
+                            lastActionTime = System.currentTimeMillis() - BLOCK_ADVANTAGE;
                         }
                         break;
                     case HACK_LEFT:
@@ -417,7 +418,7 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
                                 playSound(random.nextInt((BLOCK4 - BLOCK1) + 1) + BLOCK1);
                             }
                             Log.i("Action", "HACK_LEFT blocked!");
-                            lastActionTime = System.currentTimeMillis();
+                            lastActionTime = System.currentTimeMillis() - BLOCK_ADVANTAGE;
                         }
                         break;
                     case HACK_VERTICAL:
@@ -429,7 +430,7 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
                                 playSound(random.nextInt((BLOCK4 - BLOCK1) + 1) + BLOCK1);
                             }
                             Log.i("Action", "HACK_VERTICAL blocked!");
-                            lastActionTime = System.currentTimeMillis();
+                            lastActionTime = System.currentTimeMillis() - BLOCK_ADVANTAGE;
                         }
                         break;
                 }
