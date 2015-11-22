@@ -40,12 +40,11 @@
             android:layout_height="wrap_content"
             android:src="@drawable/crossed_swords"/>
 
-        <Button
-            android:id="@+id/cancel_duel"
+        <ToggleButton
+            android:id="@+id/star_wars"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="center_horizontal"
-            android:text="Cancel duel"/>
+            android:text="Star wars"/>
     </LinearLayout>
 
 </android.support.design.widget.CoordinatorLayout>

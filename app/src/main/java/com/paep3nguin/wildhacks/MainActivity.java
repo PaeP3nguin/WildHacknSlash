@@ -60,12 +60,14 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
     private static final int ATTACK1 = 0;
     private static final int ATTACK2 = 1;
     private static final int BLOCK1 = 2;
-    private static final int BLOCK2 = 3;
-    private static final int BLOCK3 = 4;
     private static final int BLOCK4 = 5;
     private static final int HIT_SOUND = 6;
     private static final int LOSS_SOUND = 7;
     private static final int WIN_SOUND = 8;
+    private static final int SWING_1 = 9;
+    private static final int SWING_5 = 13;
+    private static final int HIT_1 = 14;
+    private static final int HIT_7 = 20;
 
     private Dialog dialog;
     View whiteBar;
@@ -91,6 +93,7 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
     private int health = MAX_HEALTH;
     private AtomicInteger action;
     private boolean in_game = false;
+    private boolean star_wars = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -120,6 +123,18 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
         soundIDs.add(soundPool.load(this, R.raw.wilhelm, 1));
         soundIDs.add(soundPool.load(this, R.raw.fatality, 1));
         soundIDs.add(soundPool.load(this, R.raw.triumph, 1));
+        soundIDs.add(soundPool.load(this, R.raw.swing_1, 1));
+        soundIDs.add(soundPool.load(this, R.raw.swing_2, 1));
+        soundIDs.add(soundPool.load(this, R.raw.swing_3, 1));
+        soundIDs.add(soundPool.load(this, R.raw.swing_4, 1));
+        soundIDs.add(soundPool.load(this, R.raw.swing_5, 1));
+        soundIDs.add(soundPool.load(this, R.raw.hit_1, 1));
+        soundIDs.add(soundPool.load(this, R.raw.hit_2, 1));
+        soundIDs.add(soundPool.load(this, R.raw.hit_3, 1));
+        soundIDs.add(soundPool.load(this, R.raw.hit_4, 1));
+        soundIDs.add(soundPool.load(this, R.raw.hit_5, 1));
+        soundIDs.add(soundPool.load(this, R.raw.hit_6, 1));
+        soundIDs.add(soundPool.load(this, R.raw.hit_7, 1));
 
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -277,6 +292,11 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
         dialog.dismiss();
     }
 
+    @OnClick(R.id.star_wars)
+    public void starWars() {
+        star_wars = !star_wars;
+    }
+
     @Override
     public void onDiscoveryStarted() {
 
@@ -343,11 +363,19 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
                             break;
                         }
                         if (attack == STAB) {
-                            playSound(ATTACK1);
+                            if (star_wars) {
+                                playSound(random.nextInt((SWING_5 - SWING_1) + 1) + SWING_1);
+                            } else {
+                                playSound(ATTACK1);
+                            }
                             simpleBluetooth.sendData(STAB);
                             Log.i("Attack", "Sending STAB");
                         } else {
-                            playSound(ATTACK2);
+                            if (star_wars) {
+                                playSound(random.nextInt((SWING_5 - SWING_1) + 1) + SWING_1);
+                            } else {
+                                playSound(ATTACK2);
+                            }
                             simpleBluetooth.sendData(attack);
                             Log.i("Attack", "Sending " + Integer.toString(attack));
                         }
@@ -357,7 +385,11 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
                     case STAB:
                         if (Math.abs(event.values[Z]) >= 9.8 + BLOCK_SENSITIVITY || attack == STAB) {
                             action.set(0);
-                            playSound(random.nextInt((BLOCK4 - BLOCK1) + 1) + BLOCK1);
+                            if (star_wars) {
+                                playSound(random.nextInt((HIT_7 - HIT_1) + 1) + HIT_1);
+                            } else {
+                                playSound(random.nextInt((BLOCK4 - BLOCK1) + 1) + BLOCK1);
+                            }
                             Log.i("Action", "STAB blocked!");
                             lastActionTime = System.currentTimeMillis();
                         }
@@ -365,7 +397,11 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
                     case HACK_RIGHT:
                         if (event.values[Z] <= -9.8 - BLOCK_SENSITIVITY || attack == HACK_RIGHT) {
                             action.set(0);
-                            playSound(random.nextInt((BLOCK4 - BLOCK1) + 1) + BLOCK1);
+                            if (star_wars) {
+                                playSound(random.nextInt((HIT_7 - HIT_1) + 1) + HIT_1);
+                            } else {
+                                playSound(random.nextInt((BLOCK4 - BLOCK1) + 1) + BLOCK1);
+                            }
                             Log.i("Action", "HACK_RIGHT blocked!");
                             lastActionTime = System.currentTimeMillis();
                         }
@@ -373,7 +409,11 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
                     case HACK_LEFT:
                         if (event.values[Z] >= 9.8 + BLOCK_SENSITIVITY || attack == HACK_LEFT) {
                             action.set(0);
-                            playSound(random.nextInt((BLOCK4 - BLOCK1) + 1) + BLOCK1);
+                            if (star_wars) {
+                                playSound(random.nextInt((HIT_7 - HIT_1) + 1) + HIT_1);
+                            } else {
+                                playSound(random.nextInt((BLOCK4 - BLOCK1) + 1) + BLOCK1);
+                            }
                             Log.i("Action", "HACK_LEFT blocked!");
                             lastActionTime = System.currentTimeMillis();
                         }
@@ -381,7 +421,11 @@ public class MainActivity extends AppCompatActivity implements SimpleBluetoothLi
                     case HACK_VERTICAL:
                         if (event.values[Z] <= -9.8 - BLOCK_SENSITIVITY || attack == HACK_VERTICAL) {
                             action.set(0);
-                            playSound(random.nextInt((BLOCK4 - BLOCK1) + 1) + BLOCK1);
+                            if (star_wars) {
+                                playSound(random.nextInt((HIT_7 - HIT_1) + 1) + HIT_1);
+                            } else {
+                                playSound(random.nextInt((BLOCK4 - BLOCK1) + 1) + BLOCK1);
+                            }
                             Log.i("Action", "HACK_VERTICAL blocked!");
                             lastActionTime = System.currentTimeMillis();
                         }
